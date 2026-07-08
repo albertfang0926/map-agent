@@ -1,8 +1,18 @@
 <template>
-  <div class="loading">地图智能体启动中…（UI 在 Task 9 接入）</div>
+  <div class="layout">
+    <ChatPanel class="chat-col" />
+    <MapPanel class="map-col" />
+  </div>
 </template>
+
+<script setup lang="ts">
+import ChatPanel from './components/ChatPanel.vue';
+import MapPanel from './components/MapPanel.vue';
+</script>
 
 <style>
 html, body, #app { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
-.loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #888; }
+.layout { display: flex; height: 100%; }
+.chat-col { width: 40%; border-right: 1px solid #ddd; }
+.map-col { width: 60%; }
 </style>
