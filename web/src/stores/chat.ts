@@ -22,9 +22,14 @@ export const useChatStore = defineStore('chat', {
       if (event.type === 'tool_call') {
         this.push({ id: crypto.randomUUID(), role: 'tool', content: `调用 ${event.tool}…`, toolName: event.tool });
       } else if (event.type === 'observation' && event.tool === 'poi_search') {
+        if (event.result?.error) {
+          this.push({ id: crypto.randomUUID(), role: 'assistant', content: `⚠️ ${event.tool} 调用失败：${event.result.error}` });
+        }
         map.setPois(event.result?.pois ?? []);
       } else if (event.type === 'message') {
         this.push({ id: crypto.randomUUID(), role: 'assistant', content: event.content });
+      } else if (event.type === 'error') {
+        this.push({ id: crypto.randomUUID(), role: 'assistant', content: `⚠️ 出错了：${event.message ?? '未知错误'}` });
       }
     },
     async send(text: string) {

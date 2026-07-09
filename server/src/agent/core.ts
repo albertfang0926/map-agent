@@ -6,7 +6,8 @@ export interface RunAgentDeps {
   tools: Tool[];
   shortTermMemory?: LLMMessage[];
   maxIterations?: number;
-  onEvent: (event: AgentEvent) => void;
+  // 事件下沉可为异步（SSE 写入是 async）。必须 await，否则流关闭时尾部事件会丢失。
+  onEvent: (event: AgentEvent) => void | Promise<void>;
 }
 
 export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<void> {
@@ -25,7 +26,7 @@ export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<v
     if (response.toolCalls.length > 0) {
       messages.push({ role: 'assistant', content: response.content, tool_calls: response.toolCalls });
       for (const call of response.toolCalls) {
-        onEvent({ type: 'tool_call', tool: call.function.name, args: call.function.arguments });
+        await onEvent({ type: 'tool_call', tool: call.function.name, args: call.function.arguments });
         const tool = tools.find((t) => t.name === call.function.name);
         let result: unknown;
         if (!tool) {
@@ -37,16 +38,16 @@ export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<v
             result = { error: (e as Error).message };
           }
         }
-        onEvent({ type: 'observation', tool: call.function.name, result });
+        await onEvent({ type: 'observation', tool: call.function.name, result });
         messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
       }
       continue;
     }
 
-    onEvent({ type: 'message', content: response.content ?? '' });
-    onEvent({ type: 'done' });
+    await onEvent({ type: 'message', content: response.content ?? '' });
+    await onEvent({ type: 'done' });
     return;
   }
 
-  onEvent({ type: 'error', message: `达到最大迭代次数 ${maxIterations}` });
+  await onEvent({ type: 'error', message: `达到最大迭代次数 ${maxIterations}` });
 }
