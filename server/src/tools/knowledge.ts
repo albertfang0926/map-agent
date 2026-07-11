@@ -41,7 +41,7 @@ export function createSpatialTool(map: MapProvider): Tool {
           type: 'object',
           properties: {
             reference: { type: 'string', description: '参考地名；省略时以 places[0] 为参考' },
-            places: { type: 'array', items: { type: 'string' }, description: '待分析的地点名列表' },
+            places: { type: 'array', items: { type: 'string' }, minItems: 1, description: '待分析的地点名列表' },
           },
           required: ['places'],
         },
