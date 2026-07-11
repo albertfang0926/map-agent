@@ -1,17 +1,19 @@
 import { defineStore } from 'pinia';
-import { useMapStore } from './map';
+import { useMapStore, type RouteData } from './map';
 
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'tool';
   content: string;
   toolName?: string;
+  streaming?: boolean;
 }
 
 export const useChatStore = defineStore('chat', {
   state: () => ({
     messages: [] as ChatMessage[],
     loading: false,
+    sessionId: crypto.randomUUID(),
   }),
   actions: {
     push(msg: ChatMessage) {
@@ -19,15 +21,33 @@ export const useChatStore = defineStore('chat', {
     },
     handleEvent(event: any) {
       const map = useMapStore();
-      if (event.type === 'tool_call') {
+      if (event.type === 'token') {
+        const last = this.messages[this.messages.length - 1];
+        if (last && last.role === 'assistant' && last.streaming) {
+          last.content += event.content;
+        } else {
+          this.push({ id: crypto.randomUUID(), role: 'assistant', content: event.content, streaming: true });
+        }
+      } else if (event.type === 'message') {
+        const last = this.messages[this.messages.length - 1];
+        if (last && last.role === 'assistant' && last.streaming) {
+          last.content = event.content;
+          last.streaming = false;
+        } else {
+          this.push({ id: crypto.randomUUID(), role: 'assistant', content: event.content });
+        }
+      } else if (event.type === 'tool_call') {
         this.push({ id: crypto.randomUUID(), role: 'tool', content: `调用 ${event.tool}…`, toolName: event.tool });
-      } else if (event.type === 'observation' && event.tool === 'poi_search') {
+      } else if (event.type === 'observation') {
         if (event.result?.error) {
           this.push({ id: crypto.randomUUID(), role: 'assistant', content: `⚠️ ${event.tool} 调用失败：${event.result.error}` });
         }
-        map.setPois(event.result?.pois ?? []);
-      } else if (event.type === 'message') {
-        this.push({ id: crypto.randomUUID(), role: 'assistant', content: event.content });
+        if (event.tool === 'poi_search') {
+          map.setPois(event.result?.pois ?? []);
+        } else if (event.tool === 'route_plan') {
+          const route = event.result?.route;
+          map.setRoutes(route ? [route as RouteData] : []);
+        }
       } else if (event.type === 'error') {
         this.push({ id: crypto.randomUUID(), role: 'assistant', content: `⚠️ 出错了：${event.message ?? '未知错误'}` });
       }
@@ -39,7 +59,7 @@ export const useChatStore = defineStore('chat', {
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify({ message: text, sessionId: this.sessionId }),
         });
         const reader = res.body!.getReader();
         const decoder = new TextDecoder();
