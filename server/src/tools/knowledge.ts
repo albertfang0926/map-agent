@@ -26,7 +26,7 @@ function bearing(a: LngLat, b: LngLat): number {
 
 const DIRS = ['北', '东北', '东', '东南', '南', '西南', '西', '西北'];
 function compass(b: number): string {
-  return DIRS[Math.floor(b / 45) % 8];
+  return DIRS[Math.round(b / 45) % 8];
 }
 
 export function createSpatialTool(map: MapProvider): Tool {

@@ -26,7 +26,7 @@ describe('spatial_query 工具', () => {
       referenceLocation: { lng: 116.4, lat: 39.9 },
       results: [
         expect.objectContaining({ place: '上海', direction: '东南', distanceKm: expect.any(Number) }),
-        expect.objectContaining({ place: '南京', direction: '东南', distanceKm: expect.any(Number) }),
+        expect.objectContaining({ place: '南京', direction: '南', distanceKm: expect.any(Number) }),
       ],
       nearest: '南京',
     });
