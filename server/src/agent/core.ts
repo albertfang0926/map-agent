@@ -10,10 +10,11 @@ export interface RunAgentDeps {
   onEvent: (event: AgentEvent) => void | Promise<void>;
 }
 
-export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<void> {
+export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<LLMMessage[]> {
   const { llm, tools, onEvent } = deps;
   const maxIterations = deps.maxIterations ?? 8;
   const toolDefs = tools.map((t) => t.definition);
+  const useStream = !!llm.streamChat;
   const messages: LLMMessage[] = [
     { role: 'system', content: buildSystemPrompt(tools) },
     ...(deps.shortTermMemory ?? []),
@@ -21,7 +22,13 @@ export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<v
   ];
 
   for (let i = 0; i < maxIterations; i++) {
-    const response = await llm.chat({ messages, tools: toolDefs });
+    const response = useStream
+      ? await llm.streamChat!({
+          messages,
+          tools: toolDefs,
+          onToken: async (t) => { await onEvent({ type: 'token', content: t }); },
+        })
+      : await llm.chat({ messages, tools: toolDefs });
 
     if (response.toolCalls.length > 0) {
       messages.push({ role: 'assistant', content: response.content, tool_calls: response.toolCalls });
@@ -46,8 +53,10 @@ export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<v
 
     await onEvent({ type: 'message', content: response.content ?? '' });
     await onEvent({ type: 'done' });
-    return;
+    messages.push({ role: 'assistant', content: response.content ?? '' });
+    return messages;
   }
 
   await onEvent({ type: 'error', message: `达到最大迭代次数 ${maxIterations}` });
+  return messages;
 }
