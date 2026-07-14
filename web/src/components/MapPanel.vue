@@ -13,6 +13,8 @@ const el = ref<HTMLDivElement>();
 const store = useMapStore();
 let AMap: any, map: any;
 let markers: any[] = [];
+let polylines: any[] = [];
+const ROUTE_COLORS = ['#1677ff', '#52c41a', '#fa8c16', '#722ed1'];
 
 onMounted(async () => {
   AMap = await loadAmap(key, security);
@@ -30,6 +32,25 @@ watch(
       return m;
     });
     if (pois.length && map) map.setFitView();
+  },
+  { deep: true },
+);
+
+watch(
+  () => store.routes,
+  (routes) => {
+    polylines.forEach((p) => p.setMap(null));
+    polylines = routes.map((r, i) => {
+      const pl = new AMap.Polyline({
+        path: r.polyline.map((pt) => [pt.lng, pt.lat]),
+        strokeColor: ROUTE_COLORS[i % ROUTE_COLORS.length],
+        strokeWeight: 5,
+        strokeOpacity: 0.9,
+      });
+      pl.setMap(map);
+      return pl;
+    });
+    if (routes.length && map) map.setFitView();
   },
   { deep: true },
 );

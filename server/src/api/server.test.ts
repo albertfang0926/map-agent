@@ -51,4 +51,53 @@ describe('api', () => {
     expect(body).toContain('"type":"message"');
     expect(body).toContain('找到了1家咖啡馆');
   });
+
+  it('同一 sessionId 第二轮能看到第一轮的对话历史', async () => {
+    const seen: any[] = [];
+    let n = 0;
+    const responses: LLMResponse[] = [
+      { content: '好的', toolCalls: [] },
+      { content: '继续', toolCalls: [] },
+    ];
+    const llm: LLM = {
+      chat: async ({ messages }) => {
+        seen.push(messages.map((m) => ({ role: m.role, content: (m as any).content })));
+        return responses[n++];
+      },
+    };
+    const app = createApp({ llm });
+
+    // 消费响应体：streamSSE 的回调（含 memory.save）需流被排空才会完整执行
+    const r1 = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '第一轮', sessionId: 'sess-A' }),
+    });
+    await r1.text();
+    const r2 = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '第二轮', sessionId: 'sess-A' }),
+    });
+    await r2.text();
+
+    // 第二次调用时 messages 应包含第一轮的 user + assistant
+    expect(seen[1].some((m: any) => m.role === 'user' && m.content === '第一轮')).toBe(true);
+    expect(seen[1].some((m: any) => m.role === 'assistant' && m.content === '好的')).toBe(true);
+  });
+
+  it('不同 sessionId 历史互不影响', async () => {
+    const seen: any[] = [];
+    let n = 0;
+    const responses: LLMResponse[] = [{ content: 'A', toolCalls: [] }, { content: 'B', toolCalls: [] }];
+    const llm: LLM = { chat: async ({ messages }) => { seen.push(messages); return responses[n++]; } };
+    const app = createApp({ llm });
+
+    const s1r = await app.request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '只对sess1说', sessionId: 's1' }) });
+    await s1r.text();
+    const s2r = await app.request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: 'hi', sessionId: 's2' }) });
+    await s2r.text();
+
+    expect(seen[1].some((m: any) => m.role === 'user' && m.content === '只对sess1说')).toBe(false);
+  });
 });

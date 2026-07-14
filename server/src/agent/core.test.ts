@@ -41,4 +41,26 @@ describe('runAgent', () => {
     await runAgent('x', { llm, tools: [fakeTool], onEvent: (e) => { events.push(e); }, maxIterations: 2 });
     expect(events.some((e) => e.type === 'error')).toBe(true);
   });
+
+  it('流式 LLM 逐 token 推送，最后推 message + done', async () => {
+    const events: AgentEvent[] = [];
+    const llm: LLM = {
+      chat: async () => ({ content: '找到2家咖啡馆', toolCalls: [] }),
+      streamChat: async ({ onToken }) => {
+        for (const t of ['找到', '2家', '咖啡馆']) await onToken(t);
+        return { content: '找到2家咖啡馆', toolCalls: [] };
+      },
+    };
+    const messages = await runAgent('找咖啡', { llm, tools: [], onEvent: (e) => { events.push(e); } });
+    expect(events.map((e) => e.type)).toEqual(['token', 'token', 'token', 'message', 'done']);
+    expect(events[3]).toMatchObject({ content: '找到2家咖啡馆' });
+    expect(messages.some((m) => m.role === 'user' && m.content === '找咖啡')).toBe(true);
+  });
+
+  it('runAgent 返回完整 messages 数组（含 system/user）', async () => {
+    const llm = makeScriptedLLM([{ content: '你好', toolCalls: [] }]);
+    const messages = await runAgent('hi', { llm, tools: [], onEvent: () => {} });
+    expect(messages[0].role).toBe('system');
+    expect(messages.at(-1)).toMatchObject({ role: 'assistant', content: '你好' });
+  });
 });
