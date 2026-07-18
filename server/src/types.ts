@@ -108,3 +108,48 @@ export type AgentEvent =
   | { type: 'message'; content: string }
   | { type: 'done' }
   | { type: 'error'; message: string };
+
+// ===== P2：长期记忆与行程 =====
+
+// 用户偏好画像（键值/JSON）
+export interface Preference {
+  key: string;
+  value: string;
+  updatedAt: string;
+}
+
+// 收藏地点
+export interface SavedPlace {
+  id: string;
+  name: string;
+  location: LngLat;
+  address?: string;
+  tags?: string[];
+  savedAt: string;
+}
+
+// 历史会话摘要
+export interface SessionSummary {
+  sessionId: string;
+  summary: string;
+  messageCount: number;
+  updatedAt: string;
+}
+
+// 行程单天（含配好的路线）
+export interface ItineraryDay {
+  day: number;
+  places: MapPOI[];
+  route?: RouteResult;
+}
+
+// 行程
+export interface Itinerary {
+  days: ItineraryDay[];
+}
+
+// planner 内部草稿（已分组排序，无路线）
+export interface ItineraryDayDraft {
+  day: number;
+  places: MapPOI[];
+}
