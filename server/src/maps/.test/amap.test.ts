@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createAmapProvider } from './amap';
+import { createAmapProvider } from '../amap';
 
 describe('createAmapProvider', () => {
   it('解析高德 POI 响应', async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createSpatialTool } from './knowledge';
-import type { MapProvider } from '../types';
+import { createSpatialTool } from '../knowledge';
+import type { MapProvider } from '../../types';
 
 // 北京 [116.40, 39.90] → 上海 [121.47, 31.23]：约 1067km，方位≈153°→东南
 function makeMap(): MapProvider {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createDeepSeekLLM } from './deepseek';
+import { createDeepSeekLLM } from '../deepseek';
 
 describe('deepseek LLM', () => {
   it('解析 tool_calls 响应', async () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createApp } from './server';
-import type { LLM, LLMResponse, Tool } from '../types';
+import { createApp } from '../server';
+import type { LLM, LLMResponse, Tool } from '../../types';
 
 // 复用：一个先返回 tool_call、再返回最终文本的假 LLM + 假工具（不触网）
 function makeFakeLlmAndTool() {

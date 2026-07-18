@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGeocodeTool } from './geocode';
-import type { MapProvider } from '../types';
+import { createGeocodeTool } from '../geocode';
+import type { MapProvider } from '../../types';
 
 describe('geocode 工具', () => {
   it('正地理编码：地址→坐标', async () => {

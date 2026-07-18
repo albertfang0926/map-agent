@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createRouteTool } from './routing';
-import type { MapProvider } from '../types';
+import { createRouteTool } from '../routing';
+import type { MapProvider } from '../../types';
 
 function makeMap(): MapProvider {
   return {

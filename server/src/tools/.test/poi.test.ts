@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createPoiTool } from './poi';
-import type { MapProvider } from '../types';
+import { createPoiTool } from '../poi';
+import type { MapProvider } from '../../types';
 
 describe('poi_search 工具', () => {
   it('执行搜索并包装结果', async () => {

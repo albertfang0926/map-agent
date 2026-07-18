@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createShortTermMemory } from './short_term';
-import type { LLMMessage } from '../types';
+import { createShortTermMemory } from '../short_term';
+import type { LLMMessage } from '../../types';
 
 describe('short_term memory', () => {
   it('save 后 get 返回相同消息', () => {

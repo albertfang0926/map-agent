@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { runAgent } from './core';
-import type { LLM, LLMResponse, Tool, AgentEvent } from '../types';
+import { runAgent } from '../core';
+import type { LLM, LLMResponse, Tool, AgentEvent } from '../../types';
 
 function makeScriptedLLM(responses: LLMResponse[]): LLM {
   let i = 0;
