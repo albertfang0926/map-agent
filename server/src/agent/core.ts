@@ -5,6 +5,7 @@ export interface RunAgentDeps {
   llm: LLM;
   tools: Tool[];
   shortTermMemory?: LLMMessage[];
+  historySummaries?: string[];
   maxIterations?: number;
   // 事件下沉可为异步（SSE 写入是 async）。必须 await，否则流关闭时尾部事件会丢失。
   onEvent: (event: AgentEvent) => void | Promise<void>;
@@ -16,7 +17,7 @@ export async function runAgent(userInput: string, deps: RunAgentDeps): Promise<L
   const toolDefs = tools.map((t) => t.definition);
   const useStream = !!llm.streamChat;
   const messages: LLMMessage[] = [
-    { role: 'system', content: buildSystemPrompt(tools) },
+    { role: 'system', content: buildSystemPrompt(tools, { historySummaries: deps.historySummaries }) },
     ...(deps.shortTermMemory ?? []),
     { role: 'user', content: userInput },
   ];
