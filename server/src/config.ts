@@ -7,4 +7,5 @@ export const config = {
   deepseekApiKey: process.env.DEEPSEEK_API_KEY ?? "",
   amapApiKey: process.env.AMAP_API_KEY ?? "",
   port: Number(process.env.PORT ?? 3000),
+  sqlitePath: process.env.SQLITE_PATH ?? "./data/fagent.db",
 };

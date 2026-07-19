@@ -1,6 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createApp } from '../server';
 import type { LLM, LLMResponse, Tool } from '../../types';
+import type { LongTermMemory } from '../../memory/long_term';
+
+// 所有测试统一注入 mockLTM，避免默认 createLongTermMemory 触盘
+const mockLTM = {
+  getRecentSummaries: vi.fn().mockResolvedValue([]),
+  saveSummary: vi.fn().mockResolvedValue(undefined),
+  getAllPreferences: vi.fn().mockResolvedValue({}),
+} as unknown as LongTermMemory;
 
 // 复用：一个先返回 tool_call、再返回最终文本的假 LLM + 假工具（不触网）
 function makeFakeLlmAndTool() {
@@ -23,13 +31,13 @@ function makeFakeLlmAndTool() {
 
 describe('api', () => {
   it('/health 返回 ok', async () => {
-    const res = await createApp().request('/health');
+    const res = await createApp({ longTermMemory: mockLTM }).request('/health');
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ ok: true });
   });
 
   it('/api/chat 缺少 message 返回 400', async () => {
-    const res = await createApp().request('/api/chat', {
+    const res = await createApp({ longTermMemory: mockLTM }).request('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
@@ -39,7 +47,7 @@ describe('api', () => {
 
   it('/api/chat 流式输出 tool_call / observation / 最终 message 全部事件', async () => {
     const { llm, tool } = makeFakeLlmAndTool();
-    const res = await createApp({ llm, tools: [tool] }).request('/api/chat', {
+    const res = await createApp({ llm, tools: [tool], longTermMemory: mockLTM }).request('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: '找咖啡' }),
@@ -65,7 +73,7 @@ describe('api', () => {
         return responses[n++];
       },
     };
-    const app = createApp({ llm });
+    const app = createApp({ llm, longTermMemory: mockLTM });
 
     // 消费响应体：streamSSE 的回调（含 memory.save）需流被排空才会完整执行
     const r1 = await app.request('/api/chat', {
@@ -91,7 +99,7 @@ describe('api', () => {
     let n = 0;
     const responses: LLMResponse[] = [{ content: 'A', toolCalls: [] }, { content: 'B', toolCalls: [] }];
     const llm: LLM = { chat: async ({ messages }) => { seen.push(messages); return responses[n++]; } };
-    const app = createApp({ llm });
+    const app = createApp({ llm, longTermMemory: mockLTM });
 
     const s1r = await app.request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '只对sess1说', sessionId: 's1' }) });
     await s1r.text();
@@ -99,5 +107,55 @@ describe('api', () => {
     await s2r.text();
 
     expect(seen[1].some((m: any) => m.role === 'user' && m.content === '只对sess1说')).toBe(false);
+  });
+
+  it('首轮（无短期记忆）注入历史摘要到 system', async () => {
+    const longTermMemory = {
+      getRecentSummaries: vi.fn().mockResolvedValue([
+        { sessionId: 'old', summary: '用户曾去上海看人文', messageCount: 4, updatedAt: '2026-07-17T00:00:00.000Z' },
+      ]),
+      saveSummary: vi.fn().mockResolvedValue(undefined),
+    } as unknown as LongTermMemory;
+    let seenSystem = '';
+    const llm: LLM = {
+      chat: vi.fn().mockImplementation(async ({ messages }) => {
+        const sys = messages.find((m: any) => m.role === 'system');
+        seenSystem = sys?.content ?? '';
+        return { content: 'ok', toolCalls: [] };
+      }),
+    };
+    const app = createApp({ llm, longTermMemory });
+    const res = await app.request('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '你好', sessionId: 'fresh-session' }),
+    });
+    await res.text();
+    expect(longTermMemory.getRecentSummaries).toHaveBeenCalledWith(3);
+    expect(seenSystem).toContain('用户曾去上海看人文');
+  });
+
+  it('非首轮（有短期记忆）不注入历史摘要', async () => {
+    const longTermMemory = {
+      getRecentSummaries: vi.fn().mockResolvedValue([{ sessionId: 'old', summary: '历史X', messageCount: 2, updatedAt: 't' }]),
+      saveSummary: vi.fn().mockResolvedValue(undefined),
+    } as unknown as LongTermMemory;
+    let seenSystem = '';
+    const llm: LLM = {
+      chat: vi.fn().mockImplementation(async ({ messages }) => {
+        const sys = messages.find((m: any) => m.role === 'system');
+        seenSystem = sys?.content ?? '';
+        return { content: 'ok', toolCalls: [] };
+      }),
+    };
+    const app = createApp({ llm, longTermMemory });
+    // 第一轮（fresh）会注入；第二轮（同 sessionId 已有短期记忆）不应再注入
+    const r1 = await app.request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '第一轮', sessionId: 'sess-X' }) });
+    await r1.text();
+    (longTermMemory.getRecentSummaries as any).mockClear();
+    const r2 = await app.request('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: '第二轮', sessionId: 'sess-X' }) });
+    await r2.text();
+    expect(longTermMemory.getRecentSummaries).not.toHaveBeenCalled();
+    expect(seenSystem).not.toContain('历史X');
   });
 });
