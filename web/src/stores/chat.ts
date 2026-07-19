@@ -55,6 +55,10 @@ export const useChatStore = defineStore('chat', {
         } else if (event.tool === 'route_plan') {
           const route = event.result?.route;
           map.setRoutes(route ? [route as RouteData] : []);
+        } else if (event.tool === 'recommend') {
+          const days = event.result?.itinerary?.days ?? [];
+          const routes = days.map((d: any) => d.route).filter(Boolean) as RouteData[];
+          map.setRoutes(routes);
         }
       } else if (event.type === 'error') {
         this.commitStreaming();
