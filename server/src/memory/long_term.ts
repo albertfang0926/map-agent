@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Preference, SavedPlace, SessionSummary } from '../types';
+import type { SavedPlace, SessionSummary } from '../types';
 
 export interface LongTermMemory {
   getPreference(key: string): Promise<string | undefined>;

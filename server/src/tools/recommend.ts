@@ -57,8 +57,10 @@ export function createRecommendTool(map: MapProvider, memory: LongTermMemory): T
               destination,
               waypoints: waypoints.length ? waypoints : undefined,
             });
-          } catch {
-            route = undefined; // 某天配路线失败，省略 route
+          } catch (e) {
+            // 某天配路线失败：省略该天 route，不整体失败；记录便于排查
+            console.warn(`[recommend] day ${d.day} planRoute failed: ${(e as Error).message}`);
+            route = undefined;
           }
         }
         days.push({ day: d.day, places: d.places, route });
