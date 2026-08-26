@@ -1329,39 +1329,39 @@ git commit -m "feat: render recommend itinerary as per-day routes" -m "Co-Author
 
 **Files:** 无（验证步骤）
 
-- [ ] **Step 1: 确认 Key 与 SQLite 路径**
+- [x] **Step 1: 确认 Key 与 SQLite 路径**
 
 - `server/.env.local`：`DEEPSEEK_API_KEY`、`AMAP_API_KEY`。
 - `web/.env.local`：`VITE_AMAP_JS_KEY`、`VITE_AMAP_SECURITY`。
 - SQLite 默认落在 `server/data/fagent.db`（首次运行自动创建目录与表）。
 
-- [ ] **Step 2: 启动后端**
+- [x] **Step 2: 启动后端**
 
 Run: `cd server && pnpm run dev`
 Expected: 控制台输出 `f-agent server on http://localhost:3000`，无报错；`server/data/fagent.db` 生成。
 
-- [ ] **Step 3: 启动前端**
+- [x] **Step 3: 启动前端**
 
 Run（新终端）: `cd web && pnpm run dev`
 Expected: Vite 输出本地地址。
 
-- [ ] **Step 4: 验证多日行程（recommend + 按天折线）**
+- [x] **Step 4: 验证多日行程（recommend + 按天折线）**
 
 输入「帮我规划上海三日游，喜欢人文景点」→ 助手应先 `poi_search` 再 `recommend`；地图出现**多条不同颜色折线**（按天），助手给出按天行程总结。若地图无多色折线：检查后端 `observation` 中 `recommend` 的 `itinerary.days[].route` 是否非空、前端 chat.ts recommend 分支是否生效。
 
-- [ ] **Step 5: 验证收藏与记偏好**
+- [x] **Step 5: 验证收藏与记偏好**
 
 输入「把刚才那个景点收藏一下」→ 助手调用 `save_place`；输入「记住我喜欢自然风光」→ `remember_preference`。检查 `server/data/fagent.db` 的 `saved_places`/`preferences` 表有数据（可用 `sqlite3` 或 VSCode SQLite 插件查看）。
 
-- [ ] **Step 6: 验证跨会话历史注入**
+- [x] **Step 6: 验证跨会话历史注入**
 
 开启**新对话**（前端「新对话」会换 sessionId），输入第一句话（如「你好，帮我推荐」）→ 后端首轮应取 `session_summaries` 注入 system；助手应体现对过往偏好的记忆（如优先推荐自然/人文类）。检查后端日志或摘要表已写入过往会话摘要。
 
-- [ ] **Step 7: 验证短期记忆回归**
+- [x] **Step 7: 验证短期记忆回归**
 
 同一会话内：第一轮「找三里屯的咖啡馆」，第二轮「刚才搜到的那家地址是什么」→ 助手能接上上文（P1 能力不回归）。
 
-- [ ] **Step 8: 提交 P2 完成标记**
+- [x] **Step 8: 提交 P2 完成标记**
 
 ```bash
 git add -A
